@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Proyecto_FInal_Grupo_1.Models;
 using Proyecto_FInal_Grupo_1.Models.DTOS;
 using Proyecto_FInal_Grupo_1.Services;
 
@@ -8,12 +7,12 @@ namespace Proyecto_FInal_Grupo_1.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TeamCarController : ControllerBase
+    public class CarSponsorController : ControllerBase
     {
-        private readonly ITeamCarService _service;
-        private readonly ILogger<TeamCarController> _logger;
+        private readonly ICarSponsorService _service;
+        private readonly ILogger<CarSponsorController> _logger;
 
-        public TeamCarController(ITeamCarService service, ILogger<TeamCarController> logger)
+        public CarSponsorController(ICarSponsorService service, ILogger<CarSponsorController> logger)
         {
             _service = service;
             _logger = logger;
@@ -22,7 +21,7 @@ namespace Proyecto_FInal_Grupo_1.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            _logger.LogInformation("Obteniendo todos los autos");
+            _logger.LogInformation("Obteniendo todas las asignaciones de sponsors");
             return Ok(await _service.GetAll());
         }
 
@@ -30,47 +29,40 @@ namespace Proyecto_FInal_Grupo_1.Controllers
         [Authorize]
         public async Task<IActionResult> GetOne(Guid id)
         {
-            var car = await _service.GetOne(id);
-            if (car == null)
-            {
-                _logger.LogWarning($"Auto con ID {id} no encontrado");
-                return NotFound();
-            }
-            return Ok(car);
+            var item = await _service.GetOne(id);
+            if (item == null) return NotFound();
+            return Ok(item);
         }
 
         [HttpPost]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<IActionResult> Create([FromBody] CreateTeamCarDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateCarSponsorDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-
             try
             {
-                var car = await _service.Create(dto);
-                _logger.LogInformation($"Auto creado: {car.TeamName} - {car.Model}");
-                return CreatedAtAction(nameof(GetOne), new { id = car.Id }, car); 
+                var item = await _service.Create(dto);
+                return CreatedAtAction(nameof(GetOne), new { id = item.Id }, item);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creando el auto"); 
-                return StatusCode(500, "Error interno del servidor"); 
+                _logger.LogError(ex, "Error asignando sponsor");
+                return StatusCode(500, ex.Message);
             }
         }
 
         [HttpPut("{id:guid}")]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTeamCarDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCarSponsorDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var car = await _service.Update(dto, id);
-                return Ok(car);
+                var item = await _service.Update(dto, id);
+                return Ok(item);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error actualizando auto {id}: {ex.Message}");
                 return NotFound(ex.Message);
             }
         }
@@ -80,7 +72,6 @@ namespace Proyecto_FInal_Grupo_1.Controllers
         public async Task<IActionResult> Delete(Guid id)
         {
             await _service.Delete(id);
-            _logger.LogInformation($"Auto {id} eliminado");
             return NoContent();
         }
     }

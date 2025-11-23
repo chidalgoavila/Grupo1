@@ -17,3 +17,7 @@ TestResult*/
 *.nupkg
 *.log
 "@ | Out-File -Encoding utf8 .gitignore
+
+obj/
+
+.vs/

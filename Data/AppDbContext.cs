@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Proyecto_FInal_Grupo_1.Models;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace Proyecto_FInal_Grupo_1.Data
 {
@@ -20,6 +18,31 @@ namespace Proyecto_FInal_Grupo_1.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Relación 1:1 (Driver <-> TeamCar)
+            modelBuilder.Entity<Driver>()
+                .HasOne(d => d.TeamCar)
+                .WithOne(c => c.Driver)
+                .HasForeignKey<Driver>(d => d.TeamCarId)
+                .IsRequired(false); // Un auto puede no tener piloto asignado aun
+
+            // Relación 1:N (Sponsor -> Drivers)
+            modelBuilder.Entity<Driver>()
+                .HasOne(d => d.Sponsor)
+                .WithMany(s => s.Drivers)
+                .HasForeignKey(d => d.SponsorId);
+
+            // Relación N:M (CarSponsor)
+            // No requiere configuración extra si las FKs están bien, pero aseguramos:
+            modelBuilder.Entity<CarSponsor>()
+                .HasOne(cs => cs.TeamCar)
+                .WithMany(c => c.CarSponsors)
+                .HasForeignKey(cs => cs.TeamCarId);
+
+            modelBuilder.Entity<CarSponsor>()
+                .HasOne(cs => cs.Sponsor)
+                .WithMany(s => s.CarSponsors)
+                .HasForeignKey(cs => cs.SponsorId);
         }
     }
 }

@@ -27,7 +27,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddOpenApi(); 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -94,12 +95,15 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connectionString));
 
+
 builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<ITeamCarRepository, TeamCarRepository>();
 builder.Services.AddScoped<ITeamCarService, TeamCarService>();
 builder.Services.AddScoped<ICarSponsorRepository, CarSponsorRepository>();
 builder.Services.AddScoped<ICarSponsorService, CarSponsorService>();
+builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
+builder.Services.AddScoped<ISponsorService, SponsorService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -107,8 +111,10 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
+
 
 app.UseCors("AllowAll");
 app.UseRateLimiter();

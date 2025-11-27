@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Proyecto_FInal_Grupo_1.Data;
 using Proyecto_FInal_Grupo_1.Repositories;
 using Proyecto_FInal_Grupo_1.Services;
@@ -27,7 +27,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddOpenApi(); 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -105,10 +106,27 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+        Console.WriteLine("✅ Base de datos migrada exitosamente.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error migrando la DB: {ex.Message}");
+    }
 }
+
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "F1 API v1");
+    c.RoutePrefix = string.Empty;
+});
 
 app.UseCors("AllowAll");
 app.UseRateLimiter();

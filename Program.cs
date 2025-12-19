@@ -110,10 +110,38 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
+// 1. Obtener la variable de entorno
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
+// 2. Si la variable existe y es una URL (formato Railway), la procesamos
+if (!string.IsNullOrEmpty(connectionString) &&
+    (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
+{
+    var uri = new Uri(connectionString);
+
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var user = Uri.UnescapeDataString(userInfo[0]);
+    var pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+
+    var builderCs = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port,
+        Username = user,
+        Password = pass,
+        Database = uri.AbsolutePath.Trim('/'),
+        SslMode = Npgsql.SslMode.Require,
+        TrustServerCertificate = true
+    };
+
+    connectionString = builderCs.ConnectionString;
+}
+
+// 3. Si sigue vacía (estás en local), usamos tus variables del .env
 if (string.IsNullOrEmpty(connectionString))
 {
+    Console.WriteLine("🏠 Usando configuración de base de datos local.");
+
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db";
     var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
     var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql";
@@ -123,8 +151,10 @@ if (string.IsNullOrEmpty(connectionString))
     connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
 }
 
+// 4. Registrar el contexto con la cadena final
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connectionString));
+
 builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<ITeamCarRepository, TeamCarRepository>();

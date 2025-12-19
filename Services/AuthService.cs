@@ -70,7 +70,9 @@ namespace Proyecto_FInal_Grupo_1.Services
         private async Task<LoginResponseDto> GenerateAuthResponse(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["JWT_KEY"]!);
+            // Bien: busca en las variables de entorno cargadas por DotNetEnv
+            var key = Encoding.ASCII.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY")
+                      ?? "ClaveSecretaSuperSeguraParaDesarrollo12345!");
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

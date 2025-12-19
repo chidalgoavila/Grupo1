@@ -107,7 +107,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
 if (string.IsNullOrEmpty(connectionString))
 {

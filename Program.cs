@@ -110,38 +110,40 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
-// 1. Obtiene la URL de conexión de la variable de entorno de Railway
+// Procesamiento de la conexión
 var connectionUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-
 string connectionString;
 
 if (!string.IsNullOrEmpty(connectionUrl))
 {
-    // --- MODO PRODUCCIÓN (RAILWAY) ---
-    // Convierte el formato postgres:// a un formato compatible con Npgsql
     var uri = new Uri(connectionUrl);
     var userInfo = uri.UserInfo.Split(':');
-
-    connectionString =
-        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
 }
 else
 {
-    // --- MODO LOCAL ---
-    // Usa variables individuales. Asegúrate de tener estas definidas en tu .env local
-    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
-    var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db";
-    var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
-    var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql";
-    var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
-
-    connectionString =
-        $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
+    connectionString = $"Host={Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost"};Database={Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db"};Username={Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres"};Password={Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql"}";
 }
 
-// 2. Registra el DbContext usando la cadena de conexión procesada
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseNpgsql(connectionString));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
+
+var app = builder.Build();
+
+// EJECUTAR MIGRACIONES AL ARRANCAR
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+        Console.WriteLine("✅ Tablas creadas correctamente en Railway.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error en tablas: {ex.Message}");
+    }
+}
 
 builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<IDriverService, DriverService>();

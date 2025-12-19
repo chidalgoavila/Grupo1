@@ -110,41 +110,21 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
-// Procesamiento de la conexión
-var connectionUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-string connectionString;
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
 
-if (!string.IsNullOrEmpty(connectionUrl))
+if (string.IsNullOrEmpty(connectionString))
 {
-    var uri = new Uri(connectionUrl);
-    var userInfo = uri.UserInfo.Split(':');
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
-}
-else
-{
-    connectionString = $"Host={Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost"};Database={Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db"};Username={Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres"};Password={Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql"}";
+    var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db";
+    var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
+    var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql";
+    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
+    var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+
+    connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
 }
 
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
-
-var app = builder.Build();
-
-// EJECUTAR MIGRACIONES AL ARRANCAR
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<AppDbContext>();
-        context.Database.Migrate();
-        Console.WriteLine("✅ Tablas creadas correctamente en Railway.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"❌ Error en tablas: {ex.Message}");
-    }
-}
-
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseNpgsql(connectionString));
 builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<ITeamCarRepository, TeamCarRepository>();

@@ -113,7 +113,7 @@ if (string.IsNullOrEmpty(connectionString))
 {
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db";
     var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
-    var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "supersecret";
+    var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql";
     var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
     var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
 

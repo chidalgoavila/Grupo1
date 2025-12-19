@@ -35,7 +35,8 @@ builder.Services.AddSwaggerGen(c =>
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        //Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Description = "Authorization: Bearer {token}",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -82,7 +83,9 @@ var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY");
 var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER");
 var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
 
-var keyBytes = Encoding.UTF8.GetBytes(jwtKey ?? "ClaveSecretaSuperSeguraParaDesarrollo12345!");
+//var keyBytes = Encoding.UTF8.GetBytes(jwtKey ?? "ClaveSecretaSuperSeguraParaDesarrollo12345!");
+var keyBytes = Encoding.UTF8.GetBytes(jwtKey!);
+
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -107,19 +110,36 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+// 1. Obtiene la URL de conexión de la variable de entorno de Railway
+var connectionUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
-if (string.IsNullOrEmpty(connectionString))
+string connectionString;
+
+if (!string.IsNullOrEmpty(connectionUrl))
 {
+    // --- MODO PRODUCCIÓN (RAILWAY) ---
+    // Convierte el formato postgres:// a un formato compatible con Npgsql
+    var uri = new Uri(connectionUrl);
+    var userInfo = uri.UserInfo.Split(':');
+
+    connectionString =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    // --- MODO LOCAL ---
+    // Usa variables individuales. Asegúrate de tener estas definidas en tu .env local
+    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "formula1db";
     var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
     var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgresql";
-    var dbHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
     var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
 
-    connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
+    connectionString =
+        $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
 }
 
+// 2. Registra el DbContext usando la cadena de conexión procesada
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connectionString));
 
@@ -143,11 +163,11 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.Migrate();
-        Console.WriteLine("✅ Base de datos migrada exitosamente.");
+        Console.WriteLine("Migración realizada correctamente.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Error migrando la DB: {ex.Message}");
+        Console.WriteLine($"Error migrando la DB: {ex.Message}");
     }
 }
 
